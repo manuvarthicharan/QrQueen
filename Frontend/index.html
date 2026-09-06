@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>UpiArt - Premium Studio</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            space: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a', 950: '#020617' },
+            aurora: { primary: '#8b5cf6', secondary: '#ec4899', accent: '#06b6d4' }
+          },
+          fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Sora', 'sans-serif'] },
+          animation: {
+            'fade-in': 'fadeIn 0.5s ease-out forwards',
+            'float': 'float 6s ease-in-out infinite',
+            'pulse-glow': 'pulseGlow 3s infinite',
+            'try-on': 'tryOnPop 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards'
+          },
+          keyframes: {
+            fadeIn: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+            float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-15px)' } },
+            pulseGlow: { '0%, 100%': { opacity: '0.6' }, '50%': { opacity: '1' } },
+            scan: { '0%, 100%': { top: '0%', opacity: '0' }, '10%, 90%': { opacity: '1' }, '50%': { top: '100%' } },
+            progressFlow: { '0%': { backgroundPosition: '200% center' }, '100%': { backgroundPosition: '0% center' } },
+            pulseRing: { '0%': { boxShadow: '0 0 0 0 rgba(139,92,246,0.7)' }, '70%': { boxShadow: '0 0 0 10px rgba(139,92,246,0)' }, '100%': { boxShadow: '0 0 0 0 rgba(139,92,246,0)' } },
+            tryOnPop: { '0%': { transform: 'scale(0.95)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1' } }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- External Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+    .font-display { font-family: 'Sora', sans-serif; }
+    
+    .bento-panel {
+      background: rgba(30, 41, 59, 0.65); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 1.5rem; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    }
+
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .step-content { opacity: 0; transition: opacity 0.4s ease-out; }
+    .step-content.active { animation: fadeIn 0.4s ease-out forwards; }
+    
+    .template-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+    .template-card:hover { transform: translateY(-4px); }
+    .template-card.active { border-color: #8b5cf6; box-shadow: 0 0 0 4px rgba(139,92,246,0.25); transform: scale(0.98); }
+
+    /* Canvas Drag Overlay */
+    #qrCanvas { touch-action: none; }
+    
+    .progress-animate { background-size: 200% auto; animation: progressFlow 2s linear infinite; }
+    .step-active-pulse { animation: pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+    /* Themed Decor Corners */
+    .decor-corner { position: fixed; width: 120px; height: 120px; pointer-events: none; z-index: 0; opacity: 0.15; border: 1px solid #8b5cf6; }
+    .decor-tl { top: 20px; left: 20px; border-right: none; border-bottom: none; border-radius: 24px 0 0 0; }
+    .decor-br { bottom: 20px; right: 20px; border-left: none; border-top: none; border-radius: 0 0 24px 0; }
+
+    /* Custom Animations */
+    .scanner-line {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #8b5cf6, #ec4899, transparent);
+      box-shadow: 0 0 15px #8b5cf6, 0 0 30px #ec4899;
+      animation: scan 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    /* Advanced CSS Checkmark Drawing Animation */
+    .success-draw {
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      animation: drawCheck 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.3s forwards;
+    }
+    @keyframes drawCheck {
+      to { stroke-dashoffset: 0; }
+    }
+  </style>
+</head>
+<body class="bg-space-950 text-space-100 min-h-screen flex flex-col relative overflow-x-hidden">
+
+  <!-- Artistic Decor -->
+  <div class="decor-corner decor-tl"></div>
+  <div class="decor-corner decor-br"></div>
+
+  <!-- Ambient Animated Background -->
+  <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+    <div class="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] bg-aurora-primary/15 rounded-full mix-blend-screen filter blur-[120px] animate-float"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-aurora-secondary/10 rounded-full mix-blend-screen filter blur-[120px] animate-float" style="animation-delay: -3s;"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="p-5 flex items-center justify-between border-b border-space-800 bg-space-950/40 backdrop-blur-xl z-50 sticky top-0">
+    <div class="flex items-end gap-3">
+      <!-- Enlarged Logo, UpiArt text removed -->
+      <img src="upiartlogo.png" alt="UpiArt" class="h-12 w-auto object-contain" style="background: transparent !important; border: none !important;" onerror="this.style.display='none';">
+      <span class="text-[10px] uppercase tracking-widest text-white bg-gradient-to-r from-aurora-primary to-aurora-secondary px-2.5 py-1 rounded-md font-bold mb-2 shadow-lg">Studio</span>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 w-full max-w-4xl mx-auto flex flex-col p-4 md:p-8 z-10">
+    
+    <!-- Next-Gen Stepper UI -->
+    <div class="mb-10 w-full bento-panel p-4 flex items-center justify-between relative overflow-hidden">
+      <!-- Glow Line -->
+      <div class="absolute top-1/2 left-8 right-8 h-1 bg-space-800 -translate-y-1/2 rounded-full -z-10"></div>
+      <div id="progressLine" class="absolute top-1/2 left-8 h-1 bg-gradient-to-r from-aurora-primary via-aurora-secondary to-aurora-primary -translate-y-1/2 rounded-full -z-10 transition-all duration-500 ease-out shadow-[0_0_15px_rgba(139,92,246,0.5)] progress-animate" style="width: 0%"></div>
+      
+      <!-- Step 1 -->
+      <div class="flex flex-col items-center gap-2 step-indicator" data-step="1">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg bg-gradient-to-br from-aurora-primary to-aurora-secondary text-white shadow-lg ring-4 ring-space-950 transition-all" id="step-btn-1">
+          <i class="ph-bold ph-upload-simple"></i>
+        </div>
+        <span class="text-[11px] font-bold uppercase tracking-wider text-white">Upload</span>
+      </div>
+      <!-- Step 2 -->
+      <div class="flex flex-col items-center gap-2 step-indicator" data-step="2">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg bg-space-800 text-space-400 ring-4 ring-space-950 transition-all duration-300" id="step-btn-2">
+          <i class="ph-bold ph-swatches"></i>
+        </div>
+        <span class="text-[11px] font-bold uppercase tracking-wider text-space-500 transition-colors">Template</span>
+      </div>
+      <!-- Step 3 -->
+      <div class="flex flex-col items-center gap-2 step-indicator" data-step="3">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg bg-space-800 text-space-400 ring-4 ring-space-950 transition-all duration-300" id="step-btn-3">
+          <i class="ph-bold ph-faders"></i>
+        </div>
+        <span class="text-[11px] font-bold uppercase tracking-wider text-space-500 transition-colors">Export</span>
+      </div>
+    </div>
+
+    <!-- Content Sections -->
+    <div class="flex-1 w-full flex flex-col items-center relative">
+      
+      <!-- STEP 1: UPLOAD -->
+      <div id="step-1" class="step-content active w-full max-w-2xl text-center" style="display: block;">
+        <div class="mb-8">
+          <h2 class="text-3xl font-display font-bold mb-3 text-white">Upload your QR Code</h2>
+          <p class="text-space-400 text-base max-w-md mx-auto">Drop your existing boring QR code here. Our engine will decode its link instantly.</p>
+        </div>
+        
+        <div id="qrDropzone" class="bento-panel p-12 border-2 border-dashed border-space-600 hover:border-aurora-primary hover:bg-space-800/80 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center text-center group relative overflow-hidden">
+          <!-- Animated Laser Scanner -->
+          <div class="scanner-line hidden group-hover:block"></div>
+          
+          <div class="w-24 h-24 bg-space-900 rounded-2xl flex items-center justify-center shadow-xl mb-6 group-hover:scale-110 group-hover:shadow-[0_0_30px_rgba(139,92,246,0.3)] transition-all relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-b from-transparent via-aurora-primary/20 to-transparent translate-y-[-100%] group-hover:animate-[scan_2s_ease-in-out_infinite]"></div>
+            <i class="ph ph-qr-code text-5xl text-aurora-primary"></i>
+          </div>
+          <h3 class="font-bold text-2xl text-white mb-2 group-hover:text-aurora-primary transition-colors">Click or Drag Image</h3>
+          <p class="text-sm text-space-400">Accepts PNG, JPG</p>
+          <input type="file" id="qrInput" accept="image/*" class="hidden">
+        </div>
+        
+        <input type="hidden" id="qrDataInput" value="">
+      </div>
+
+      <!-- STEP 2: TEMPLATE -->
+      <div id="step-2" class="step-content w-full max-w-2xl text-center" style="display: none;">
+        <div class="mb-6">
+          <h2 class="text-3xl font-display font-bold mb-3 text-white">Select a Design</h2>
+          <p class="text-space-400 text-base max-w-md mx-auto">Choose a category to find your perfect style.</p>
+        </div>
+        
+        <!-- Category Selector -->
+        <div class="flex overflow-x-auto gap-2 pb-4 hide-scrollbar mb-2 justify-start px-2 items-center" id="categoryContainer">
+          <!-- Categories injected by JS -->
+        </div>
+
+        <!-- Try On Preview Area -->
+        <div id="tryOnPreviewWrap" class="hidden mx-auto w-[200px] aspect-[3/4] mb-8 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden border border-white/10 transition-all duration-500 relative">
+          <!-- Loading Spinner overlay -->
+          <div id="tryOnLoading" class="absolute inset-0 bg-space-900/80 backdrop-blur-sm z-10 flex items-center justify-center transition-opacity duration-300 opacity-0 pointer-events-none">
+            <div class="w-8 h-8 border-4 border-space-700 border-t-aurora-primary rounded-full animate-spin"></div>
+          </div>
+          <canvas id="tryOnCanvas" class="w-full h-full object-cover"></canvas>
+        </div>
+
+        <!-- Others / Search Section -->
+        <div id="othersSearchBlock" class="hidden flex-col items-center gap-4 animate-fade-in w-full max-w-md mx-auto mb-6">
+          <div class="flex gap-2 w-full">
+            <input type="text" id="othersSearchInput" placeholder="Describe the template you want..." class="flex-1 bg-space-900 border border-space-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-aurora-primary transition-colors">
+            <button id="othersSearchBtn" class="bg-aurora-primary px-6 py-3 rounded-xl text-sm font-bold text-white hover:bg-aurora-secondary transition-colors whitespace-nowrap">Search</button>
+          </div>
+        </div>
+
+        <!-- Horizontal Template Scroll -->
+        <div class="relative w-full" id="templateContainerWrap">
+          <div class="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-6 pt-2 hide-scrollbar items-center justify-start px-2" id="templateContainer">
+            <!-- Templates injected by JS -->
+          </div>
+          <!-- Fade gradients for scroll indication -->
+          <div class="absolute top-0 right-0 w-12 h-full bg-gradient-to-l from-space-950 to-transparent pointer-events-none"></div>
+          <div class="absolute top-0 left-0 w-12 h-full bg-gradient-to-r from-space-950 to-transparent pointer-events-none"></div>
+        </div>
+
+        <!-- Custom Upload Toggle -->
+        <div class="mt-2 text-left">
+          <label class="flex items-center gap-3 p-4 bento-panel cursor-pointer group hover:border-aurora-primary transition-colors">
+            <input type="checkbox" id="useCustomTemplateCheck" class="w-5 h-5 rounded border-space-600 bg-space-800 text-aurora-primary focus:ring-aurora-primary focus:ring-offset-space-950 accent-aurora-primary">
+            <span class="text-sm font-semibold text-white">Use my own custom template (3:4 ratio)</span>
+          </label>
+
+          <!-- Custom Upload Dropzone (Hidden by default) -->
+          <div id="customTemplateUploadWrap" class="hidden mt-4 animate-fade-in">
+            <div id="customTemplateDropzone" class="bento-panel p-8 border-2 border-dashed border-space-600 hover:border-aurora-primary transition-all cursor-pointer flex flex-col items-center text-center group">
+              <div class="w-14 h-14 bg-space-900 rounded-full flex items-center justify-center shadow-lg mb-4 group-hover:scale-110 transition-transform">
+                <i class="ph ph-image text-3xl text-aurora-primary"></i>
+              </div>
+              <h3 class="font-bold text-base text-white mb-1 group-hover:text-aurora-primary transition-colors">Upload 3:4 Background</h3>
+              <p class="text-xs text-space-400">JPG or PNG</p>
+              <input type="file" id="customTemplateInput" accept="image/*" class="hidden">
+            </div>
+            
+            <!-- Preview of uploaded custom template -->
+            <div id="customTemplatePreviewWrap" class="hidden mt-4 relative w-32 aspect-[3/4] mx-auto rounded-xl overflow-hidden border-2 border-aurora-primary shadow-[0_0_15px_rgba(139,92,246,0.3)]">
+               <img id="customTemplatePreviewImg" src="" class="w-full h-full object-cover" />
+               <button id="btnRemoveCustomTemplate" class="absolute top-1 right-1 bg-red-500/90 text-white rounded-full p-1.5 hover:bg-red-600 backdrop-blur shadow-md">
+                 <i class="ph ph-x text-sm"></i>
+               </button>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="handleStep2Next()" class="mt-8 w-full py-4 bg-gradient-to-r from-aurora-primary to-aurora-secondary hover:scale-[1.02] text-white font-bold rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all flex items-center justify-center gap-2">
+          Continue to Adjust <i class="ph-bold ph-arrow-right"></i>
+        </button>
+      </div>
+
+      <!-- STEP 3: ADJUST & EXPORT -->
+      <div id="step-3" class="step-content w-full flex flex-col lg:flex-row gap-8" style="display: none;">
+        
+        <!-- Live Preview Canvas -->
+        <div class="w-full lg:w-1/2 flex flex-col items-center order-1 lg:order-2">
+          <div class="w-full max-w-[360px] aspect-[3/4] bento-panel relative overflow-hidden flex items-center justify-center shadow-2xl ring-1 ring-white/10">
+            <canvas id="qrCanvas" class="max-w-full max-h-full object-contain rounded-xl opacity-0 transition-opacity duration-300"></canvas>
+            
+            <!-- Hint Overlay -->
+            <div id="dragHint" class="absolute bottom-6 bg-space-950/80 backdrop-blur px-4 py-2 rounded-full text-xs font-bold text-white border border-space-700 animate-pulse-glow flex items-center gap-2 pointer-events-none">
+              <i class="ph-bold ph-arrows-out-cardinal"></i> Drag corners to resize QR
+            </div>
+          </div>
+          <p class="text-[10px] text-space-500 mt-4 text-center max-w-xs flex items-center justify-center gap-1">
+             <i class="ph-fill ph-lock-key"></i> Preview uses a secure dummy link. Your real data applies on download.
+          </p>
+        </div>
+
+        <!-- Adjustments & Payment -->
+        <div class="w-full lg:w-1/2 order-2 lg:order-1 flex flex-col gap-5">
+          <div>
+            <h2 class="text-3xl font-display font-bold mb-2 text-white">Adjust & Export</h2>
+            <p class="text-space-400 text-sm">Resize perfectly, choose your contrast mode, and grab your masterpiece.</p>
+          </div>
+
+          <!-- Color & Shape Toggles -->
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bento-panel p-1.5 flex bg-space-900/50">
+              <button id="qrModeDark" class="flex-1 py-2 rounded-lg text-xs font-bold bg-white text-space-950 shadow transition-all">Dark</button>
+              <button id="qrModeLight" class="flex-1 py-2 rounded-lg text-xs font-bold text-space-400 hover:text-white transition-all">Light</button>
+            </div>
+            <div class="bento-panel p-1.5 flex bg-space-900/50">
+              <button id="qrShapeSquare" class="flex-1 py-2 rounded-lg text-xs font-bold bg-space-700 text-white shadow transition-all">Square</button>
+              <button id="qrShapeRounded" class="flex-1 py-2 rounded-lg text-xs font-bold text-space-400 hover:text-white transition-all flex items-center justify-center gap-1">Curve <i class="ph-fill ph-crown text-aurora-primary"></i></button>
+            </div>
+          </div>
+          
+          <!-- Free Tier -->
+          <div class="bento-panel p-5 flex flex-col gap-3 border-space-700 relative overflow-hidden hover:border-space-500 transition-colors">
+            <div class="absolute top-0 right-0 bg-space-800 text-[10px] font-bold px-3 py-1 rounded-bl-xl text-space-300">BASIC</div>
+            <h3 class="font-bold text-white text-lg">Standard Download</h3>
+            <ul class="text-xs text-space-400 space-y-2 mb-2">
+              <li class="flex items-center gap-2"><i class="ph-bold ph-check text-green-500"></i> SD Resolution (512px)</li>
+              <li class="flex items-center gap-2"><i class="ph-bold ph-check text-green-500"></i> Premium Aesthetics & Transparency</li>
+              <li class="flex items-center gap-2"><i class="ph-bold ph-check text-green-500"></i> Auto-Scannability Validation</li>
+              <li class="flex items-center gap-2 opacity-60"><i class="ph-bold ph-x text-red-400"></i> Curved Edges (Requires Pro)</li>
+            </ul>
+            <button id="btnDownloadFree" class="w-full py-3.5 bg-space-800 hover:bg-space-700 text-white font-semibold rounded-xl transition-all text-sm border border-space-600 flex items-center justify-center gap-2">
+              Download Free (SD)
+            </button>
+          </div>
+
+          <!-- Paid Tier -->
+          <div class="bento-panel p-1 rounded-2xl bg-gradient-to-r from-aurora-primary via-aurora-secondary to-aurora-primary bg-[length:200%_auto] animate-float" style="animation-duration: 8s;">
+            <div class="bg-space-950 p-5 rounded-xl h-full relative overflow-hidden">
+              <div class="absolute top-0 right-0 bg-gradient-to-r from-aurora-primary to-aurora-secondary text-[10px] font-bold px-3 py-1 rounded-bl-xl text-white shadow-lg">PRO</div>
+              <h3 class="font-bold text-white text-lg flex items-center gap-2">Premium Master</h3>
+              <ul class="text-xs text-space-200 space-y-2 mt-3 mb-4">
+                <li class="flex items-center gap-2"><i class="ph-fill ph-star text-aurora-primary"></i> <b>Print-Ready 4K Resolution</b></li>
+                <li class="flex items-center gap-2"><i class="ph-fill ph-star text-aurora-primary"></i> <b>Zero Watermarks</b></li>
+                <li class="flex items-center gap-2"><i class="ph-fill ph-star text-aurora-primary"></i> Premium Aesthetics & Transparency</li>
+                <li class="flex items-center gap-2"><i class="ph-fill ph-star text-aurora-primary"></i> Auto-Scannability Validation</li>
+              </ul>
+              <button id="btnDownloadPaid" class="w-full py-3.5 bg-gradient-to-r from-aurora-primary to-aurora-secondary hover:opacity-90 text-white font-bold rounded-xl transition-all text-sm shadow-[0_0_20px_rgba(139,92,246,0.5)] flex items-center justify-center gap-2">
+                <i class="ph-bold ph-lock-key-open"></i> Pay ₹5 & Download HD
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Immersive Animated Overlays -->
+  <div id="validationModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
+    <div class="absolute inset-0 bg-space-950/90 backdrop-blur-xl pointer-events-auto transition-all"></div>
+    <div class="relative z-10 flex flex-col items-center gap-6 text-center pointer-events-auto p-8 animate-fade-in">
+       <div class="relative w-32 h-32 flex items-center justify-center">
+           <div class="absolute inset-0 border-4 border-space-800 rounded-full"></div>
+           <div class="absolute inset-0 border-4 border-aurora-primary rounded-full border-t-transparent animate-spin" style="animation-duration: 1.5s;"></div>
+           <i class="ph-fill ph-scan text-4xl text-aurora-primary animate-pulse"></i>
+       </div>
+       <div>
+           <h2 id="validationTitle" class="text-2xl font-bold text-white tracking-wide animate-pulse-glow">Validating Scannability...</h2>
+           <p id="validationSub" class="text-space-400 text-sm mt-2 max-w-sm">Running visual algorithms to ensure your code scans perfectly.</p>
+       </div>
+    </div>
+  </div>
+
+  <div id="successOverlay" class="hidden fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
+    <div class="absolute inset-0 bg-space-950/80 backdrop-blur-md pointer-events-auto"></div>
+    <div class="relative z-10 flex flex-col items-center text-center pointer-events-auto p-8 bento-panel max-w-sm w-[90%] mx-4 animate-fade-in shadow-2xl shadow-aurora-primary/20">
+       
+       <!-- Advanced CSS Success Animation -->
+       <div class="relative w-28 h-28 mb-4 flex items-center justify-center mx-auto">
+         <!-- Outer rippling glow layers -->
+         <div class="absolute inset-0 bg-green-500/20 rounded-full animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
+         <div class="absolute inset-2 bg-green-500/30 rounded-full animate-[ping_2.5s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
+         
+         <!-- Core Circle -->
+         <div class="relative w-20 h-20 bg-gradient-to-tr from-green-500 to-emerald-400 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(34,197,94,0.5)] animate-try-on">
+            <!-- Animated SVG Checkmark -->
+            <svg class="w-10 h-10 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" class="success-draw" />
+            </svg>
+         </div>
+       </div>
+
+       <h2 id="successTitle" class="text-2xl font-display font-bold text-white mt-2">Master Downloaded!</h2>
+       <p id="successMessage" class="text-space-300 mt-2 text-sm">Your premium QR code is ready to scan.</p>
+       <button onclick="document.getElementById('successOverlay').classList.add('hidden')" class="mt-8 w-full py-3.5 bg-space-800 hover:bg-space-700 text-white font-bold rounded-xl transition-all border border-space-600">Close</button>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="fixed top-6 left-1/2 -translate-x-1/2 z-[110] flex flex-col gap-2 pointer-events-none"></div>
+
+  <script>
+    // Configuration & State
+    const RAZORPAY_KEY_ID = "rzp_live_T9M7c6gnDteTmp"; 
+    
+    // Categorized Templates matching folder structure directly in the main folder
+    const templateCategories = {
+      business: ['business/1.jpeg', 'business/2.jpeg', 'business/3.jpeg', 'business/4.jpeg'],
+      christmas: ['christmas/1.jpeg', 'christmas/2.jpeg', 'christmas/3.jpeg', 'christmas/4.jpeg'],
+      glassmorph: ['glassmorph/1.jpeg', 'glassmorph/2.jpeg', 'glassmorph/3.jpeg', 'glassmorph/4.jpeg'],
+      minimal: ['minimal/1.jpeg', 'minimal/2.jpeg', 'minimal/3.jpeg', 'minimal/4.jpeg'],
+      nature: ['nature/1.jpeg', 'nature/2.jpeg', 'nature/3.jpeg', 'nature/4.jpeg', 'nature/5.jpeg', 'nature/6.jpeg', 'nature/7.jpeg', 'nature/8.jpeg', 'nature/9.jpeg', 'nature/10.jpeg', 'nature/11.jpeg', 'nature/12.jpeg', 'nature/13.jpeg'],
+      neon: ['neon/1.jpeg', 'neon/2.jpeg', 'neon/3.jpeg', 'neon/4.jpeg'],
+      premium: ['premium/1.jpeg', 'premium/2.jpeg', 'premium/3.jpeg', 'premium/4.jpeg', 'premium/5.jpeg', 'premium/6.jpeg', 'premium/7.jpeg', 'premium/8.jpeg'],
+      tech: ['tech/1.jpeg', 'tech/2.jpeg', 'tech/3.jpeg', 'tech/4.jpeg']
+    };
+
+    const state = {
+      step: 1,
+      qrData: '',
+      qrColorMode: 'dark', // 'dark' or 'light'
+      qrShape: 'square', // 'square' or 'rounded'
+      currentCategory: 'business',
+      selectedTemplateUrl: templateCategories['business'][0],
+      preloadedImages: {}, // Cache for fetched images
+      useCustomTemplate: false,
+      customTemplateImg: null, // Image object for custom upload
+      canvasW: 1024,
+      canvasH: 1365, // 3:4 aspect ratio
+      qrTransform: { x: null, y: null, size: null },
+      isDragging: false,
+      dragHandle: null,
+      dragStart: { x: 0, y: 0, tx: 0, ty: 0, ts: 0 },
+      needsFallback: false
+    };
+
+    const els = {
+      canvas: document.getElementById('qrCanvas'),
+      dragHint: document.getElementById('dragHint'),
+      qrDropzone: document.getElementById('qrDropzone'),
+      qrInput: document.getElementById('qrInput'),
+      templateContainer: document.getElementById('templateContainer'),
+      btnDownloadFree: document.getElementById('btnDownloadFree'),
+      btnDownloadPaid: document.getElementById('btnDownloadPaid'),
+      qrModeDark: document.getElementById('qrModeDark'),
+      qrModeLight: document.getElementById('qrModeLight'),
+      qrShapeSquare: document.getElementById('qrShapeSquare'),
+      qrShapeRounded: document.getElementById('qrShapeRounded'),
+      useCustomTemplateCheck: document.getElementById('useCustomTemplateCheck'),
+      customTemplateUploadWrap: document.getElementById('customTemplateUploadWrap'),
+      customTemplateDropzone: document.getElementById('customTemplateDropzone'),
+      customTemplateInput: document.getElementById('customTemplateInput'),
+      customTemplatePreviewWrap: document.getElementById('customTemplatePreviewWrap'),
+      customTemplatePreviewImg: document.getElementById('customTemplatePreviewImg'),
+      btnRemoveCustomTemplate: document.getElementById('btnRemoveCustomTemplate'),
+      validationModal: document.getElementById('validationModal'),
+      validationTitle: document.getElementById('validationTitle'),
+      validationSub: document.getElementById('validationSub')
+    };
+
+    const ctx = els.canvas.getContext('2d');
+
+    // UI Toast System
+    function toast(msg, type = 'success') {
+      const t = document.createElement('div');
+      t.className = `px-5 py-3 rounded-xl shadow-xl border text-xs font-bold flex items-center gap-3 backdrop-blur-xl transition-all animate-fade-in ${ type === 'error' ? 'bg-red-900/90 text-white border-red-500' : 'bg-space-800/95 text-white border-aurora-primary shadow-aurora-primary/20' }`;
+      const icon = type === 'error' ? '<i class="ph-fill ph-warning-circle text-lg"></i>' : '<i class="ph-fill ph-check-circle text-aurora-primary text-lg"></i>';
+      t.innerHTML = `${icon} <span>${msg}</span>`; 
+      document.getElementById('toastContainer').appendChild(t);
+      setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(-10px)'; setTimeout(() => t.remove(), 400); }, 3500);
+    }
+
+    // Ensure image is loaded before rendering to prevent black flashes
+    function ensureImageLoadedAsync(url, callback) {
+        const img = state.preloadedImages[url];
+        const loadingSpinner = document.getElementById('tryOnLoading');
+        if(loadingSpinner) loadingSpinner.classList.remove('opacity-0');
+
+        if (img && img.complete) {
+            if(loadingSpinner) loadingSpinner.classList.add('opacity-0');
+            callback(img);
+        } else {
+            const newImg = new Image();
+            if(url.startsWith('http')) newImg.crossOrigin = "Anonymous";
+            newImg.src = url;
+            newImg.onload = () => {
+                state.preloadedImages[url] = newImg;
+                if(loadingSpinner) loadingSpinner.classList.add('opacity-0');
+                callback(newImg);
+            };
+            newImg.onerror = () => {
+                if(loadingSpinner) loadingSpinner.classList.add('opacity-0');
+                callback(null); // Proceed anyway to avoid locking the UI
+            };
+        }
+    }
+
+    // Step Navigation
+    function goToStep(stepNumber) {
+      state.step = stepNumber;
+      
+      document.querySelectorAll('.step-content').forEach((el, index) => {
+        if (index + 1 === stepNumber) {
+          el.style.display = 'block'; 
+          setTimeout(() => el.classList.add('active'), 10);
+        } else {
+          el.classList.remove('active');
+          setTimeout(() => { if(!el.classList.contains('active')) el.style.display = 'none'; }, 400); 
+        }
+      });
+
+      document.querySelectorAll('.step-indicator').forEach((el, index) => {
+        const btn = el.querySelector('div');
+        const text = el.querySelector('span');
+        if (index + 1 < stepNumber) {
+          btn.className = 'w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg bg-gradient-to-br from-aurora-primary to-aurora-secondary text-white shadow-lg ring-4 ring-space-950 transition-all';
+          text.className = 'text-[11px] font-bold uppercase tracking-wider text-aurora-primary transition-colors';
+        } else if (index + 1 === stepNumber) {
+          btn.className = 'w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg bg-gradient-to-br from-aurora-primary to-aurora-secondary text-white shadow-[0_0_15px_rgba(139,92,246,0.5)] ring-4 ring-space-950 transition-all scale-110 step-active-pulse';
+          text.className = 'text-[11px] font-bold uppercase tracking-wider text-white transition-colors';
+        } else {
+          btn.className = 'w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg bg-space-800 text-space-400 ring-4 ring-space-950 transition-all duration-300';
+          text.className = 'text-[11px] font-bold uppercase tracking-wider text-space-500 transition-colors';
+        }
+      });
+
+      document.getElementById('progressLine').style.width = stepNumber === 1 ? '0%' : stepNumber === 2 ? '50%' : '100%';
+
+      if (stepNumber === 3) {
+        els.dragHint.classList.remove('hidden');
+        setTimeout(() => els.dragHint.classList.add('hidden'), 5000);
+        renderCanvas();
+      }
+    }
+
+    // Live Try On Preview Update
+    function updateTryOn() {
+        const wrap = document.getElementById('tryOnPreviewWrap');
+        if (state.useCustomTemplate && !state.customTemplateImg) {
+             wrap.classList.add('hidden');
+             return;
+        }
+        wrap.classList.remove('hidden');
+        
+        // Trigger reflow animation for the "pop" effect
+        wrap.classList.remove('animate-[tryOnPop_0.4s_cubic-bezier(0.4,0,0.2,1)_forwards]');
+        void wrap.offsetWidth; 
+        wrap.classList.add('animate-[tryOnPop_0.4s_cubic-bezier(0.4,0,0.2,1)_forwards]');
+        
+        const cvs = document.getElementById('tryOnCanvas');
+        cvs.width = 400; cvs.height = 533;
+        const ctx2 = cvs.getContext('2d');
+        
+        // 1. Draw Background
+        if (state.useCustomTemplate && state.customTemplateImg) {
+            drawImageCover(ctx2, state.customTemplateImg, 400, 533);
+            drawTryOnQRLayer(ctx2);
+        } else {
+            ensureImageLoadedAsync(state.selectedTemplateUrl, (imgToDraw) => {
+                if (imgToDraw) {
+                    drawImageCover(ctx2, imgToDraw, 400, 533);
+                } else {
+                    ctx2.fillStyle = '#1e293b';
+                    ctx2.fillRect(0, 0, 400, 533);
+                }
+                drawTryOnQRLayer(ctx2);
+            });
+        }
+    }
+
+    function drawTryOnQRLayer(ctx2) {
+        const qSize = 220;
+        const qx = (400 - qSize) / 2;
+        const qy = (533 - qSize) / 2 + 50;
+        
+        // Temporarily use a dummy link if no actual data is present
+        const oldData = state.qrData;
+        if (!oldData) state.qrData = "https://upiart.com";
+        const qrCvs = generateQR(state.qrColorMode, false);
+        state.qrData = oldData;
+        
+        ctx2.drawImage(qrCvs, qx, qy, qSize, qSize);
+    }
+
+    // Initialize Categories & Templates UI
+    function renderCategories() {
+        const catContainer = document.getElementById('categoryContainer');
+        catContainer.innerHTML = '';
+        const categories = Object.keys(templateCategories).concat(['others']);
+        
+        categories.forEach(cat => {
+            const btn = document.createElement('button');
+            btn.className = `px-5 py-2 rounded-xl text-sm font-bold whitespace-nowrap capitalize transition-all border ${state.currentCategory === cat ? 'bg-aurora-primary/20 text-white border-aurora-primary shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'bg-space-800 border-space-700 text-space-400 hover:text-white hover:border-space-500'}`;
+            btn.innerText = cat;
+            
+            btn.onclick = () => {
+                state.currentCategory = cat;
+                renderCategories(); // Re-render to update active styling
+                
+                if (cat === 'others') {
+                    document.getElementById('othersSearchBlock').classList.remove('hidden');
+                    document.getElementById('templateContainerWrap').classList.add('hidden');
+                } else {
+                    document.getElementById('othersSearchBlock').classList.add('hidden');
+                    document.getElementById('templateContainerWrap').classList.remove('hidden');
+                    renderTemplatesForCategory(cat);
+                    
+                    // Automatically select the first template in the newly chosen category
+                    if (templateCategories[cat] && templateCategories[cat].length > 0) {
+                        state.selectedTemplateUrl = templateCategories[cat][0];
+                        updateTryOn();
+                    }
+                }
+            };
+            catContainer.appendChild(btn);
+        });
+    }
+
+    function renderTemplatesForCategory(cat) {
+        els.templateContainer.innerHTML = '';
+        const urls = templateCategories[cat] || [];
+        urls.forEach((url) => {
+            const div = document.createElement('div');
+            div.className = `template-card snap-center shrink-0 w-[120px] aspect-[3/4] rounded-2xl border-2 overflow-hidden relative group ${state.selectedTemplateUrl === url && !state.useCustomTemplate ? 'active border-aurora-primary ring-2 ring-aurora-primary ring-offset-2 ring-offset-space-950' : 'border-space-700'}`;
+            
+            const img = document.createElement('img');
+            img.src = url;
+            // Native lazy loading for extreme performance
+            img.loading = "lazy";
+            img.onerror = () => { 
+                img.src = `https://placehold.co/400x533/1e293b/8b5cf6?text=${cat}`; 
+            };
+            img.className = "w-full h-full object-cover";
+            div.appendChild(img);
+            
+            div.onclick = () => {
+                state.useCustomTemplate = false;
+                els.useCustomTemplateCheck.checked = false;
+                els.customTemplateUploadWrap.classList.add('hidden');
+                
+                state.selectedTemplateUrl = url;
+                
+                ensureImageLoadedAsync(url, () => {
+                    updateTryOn();
+                    if (state.step === 3) renderCanvas();
+                    renderTemplatesForCategory(cat); 
+                });
+            };
+            els.templateContainer.appendChild(div);
+        });
+    }
+
+    function initTemplates() {
+      state.currentCategory = 'business';
+      state.selectedTemplateUrl = templateCategories['business'][0];
+      renderCategories();
+      renderTemplatesForCategory('business');
+      
+      // Seed default active template
+      ensureImageLoadedAsync(state.selectedTemplateUrl, () => {
+          setTimeout(updateTryOn, 50);
+      });
+    }
+
+    // Step 1: Upload Existing QR
+    els.qrDropzone.addEventListener('click', () => els.qrInput.click());
+    els.qrInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const cvs = document.createElement('canvas');
+          const ctxD = cvs.getContext('2d');
+          cvs.width = img.width; cvs.height = img.height;
+          ctxD.fillStyle = '#FFF'; ctxD.fillRect(0,0,cvs.width,cvs.height);
+          ctxD.drawImage(img, 0, 0);
+          
+          try {
+            const imgData = ctxD.getImageData(0, 0, cvs.width, cvs.height);
+            const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "attemptBoth" });
+            
+            if (code && code.data) {
+              state.qrData = code.data;
+              toast('QR Decoded successfully!');
+              
+              state.qrTransform.size = Math.floor(state.canvasW * 0.5);
+              state.qrTransform.x = Math.floor((state.canvasW - state.qrTransform.size) / 2);
+              state.qrTransform.y = Math.floor((state.canvasH - state.qrTransform.size) / 2) + 150;
+              
+              goToStep(2);
+              updateTryOn();
+            } else {
+              toast('Could not read QR. Please try a clearer image.', 'error');
+            }
+          } catch(err) { toast('Error processing image.', 'error'); }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Step 2: Others / Search Logic (Scraping)
+    document.getElementById('othersSearchBtn').addEventListener('click', () => {
+        const query = document.getElementById('othersSearchInput').value.trim();
+        if(!query) return;
+        
+        const btn = document.getElementById('othersSearchBtn');
+        btn.innerText = 'Searching...';
+        btn.disabled = true;
+
+        // Use Pollinations AI for quick image generation based on search
+        const scrapedUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(query)}%20background%20vertical?width=800&height=1067&nologo=true`;
+        
+        ensureImageLoadedAsync(scrapedUrl, (img) => {
+            btn.innerText = 'Search';
+            btn.disabled = false;
+            if(img) {
+                state.selectedTemplateUrl = scrapedUrl;
+                state.useCustomTemplate = false;
+                els.useCustomTemplateCheck.checked = false;
+                els.customTemplateUploadWrap.classList.add('hidden');
+                
+                toast('Template found successfully!');
+                updateTryOn();
+                if (state.step === 3) renderCanvas();
+            } else {
+                toast('Failed to find template.', 'error');
+            }
+        });
+    });
+
+    // Step 2: Custom Template Upload Logic
+    els.useCustomTemplateCheck.addEventListener('change', (e) => {
+      state.useCustomTemplate = e.target.checked;
+      if (state.useCustomTemplate) {
+        els.customTemplateUploadWrap.classList.remove('hidden');
+        document.querySelectorAll('.template-card').forEach(c => c.classList.remove('active', 'border-aurora-primary', 'ring-2', 'ring-aurora-primary', 'ring-offset-2', 'ring-offset-space-950'));
+      } else {
+        els.customTemplateUploadWrap.classList.add('hidden');
+        renderTemplatesForCategory(state.currentCategory);
+      }
+      updateTryOn();
+    });
+
+    els.customTemplateDropzone.addEventListener('click', () => els.customTemplateInput.click());
+    els.customTemplateInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          state.customTemplateImg = img;
+          els.customTemplatePreviewImg.src = ev.target.result;
+          els.customTemplateDropzone.classList.add('hidden');
+          els.customTemplatePreviewWrap.classList.remove('hidden');
+          toast('Custom template loaded!');
+          updateTryOn();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    els.btnRemoveCustomTemplate.addEventListener('click', () => {
+      state.customTemplateImg = null;
+      els.customTemplateInput.value = '';
+      els.customTemplatePreviewImg.src = '';
+      els.customTemplatePreviewWrap.classList.add('hidden');
+      els.customTemplateDropzone.classList.remove('hidden');
+      updateTryOn();
+    });
+
+    function handleStep2Next() {
+      if (state.useCustomTemplate && !state.customTemplateImg) {
+        toast('Please upload your custom background first!', 'error');
+        return;
+      }
+      goToStep(3);
+    }
+
+    // Step 3: Color Modes
+    els.qrModeDark.addEventListener('click', () => {
+      state.qrColorMode = 'dark';
+      els.qrModeDark.classList.replace('text-space-400', 'text-space-950');
+      els.qrModeDark.classList.add('bg-white', 'shadow');
+      els.qrModeLight.classList.remove('bg-white', 'shadow', 'text-space-950');
+      els.qrModeLight.classList.add('text-space-400');
+      renderCanvas();
+    });
+
+    els.qrModeLight.addEventListener('click', () => {
+      state.qrColorMode = 'light';
+      els.qrModeLight.classList.replace('text-space-400', 'text-space-950');
+      els.qrModeLight.classList.add('bg-white', 'shadow');
+      els.qrModeDark.classList.remove('bg-white', 'shadow', 'text-space-950');
+      els.qrModeDark.classList.add('text-space-400');
+      renderCanvas();
+    });
+
+    // Step 3: Shape Modes
+    els.qrShapeSquare.addEventListener('click', () => {
+      state.qrShape = 'square';
+      els.qrShapeSquare.classList.remove('bg-space-900/50');
+      els.qrShapeSquare.classList.add('bg-space-700', 'text-white', 'shadow');
+      els.qrShapeSquare.classList.remove('text-space-400');
+      
+      els.qrShapeRounded.classList.remove('bg-space-700', 'text-white', 'shadow');
+      els.qrShapeRounded.classList.add('text-space-400');
+      
+      els.btnDownloadFree.disabled = false;
+      els.btnDownloadFree.innerHTML = 'Download Free (SD)';
+      els.btnDownloadFree.classList.remove('opacity-50', 'cursor-not-allowed');
+
+      renderCanvas();
+    });
+
+    els.qrShapeRounded.addEventListener('click', () => {
+      state.qrShape = 'rounded';
+      els.qrShapeRounded.classList.add('bg-space-700', 'text-white', 'shadow');
+      els.qrShapeRounded.classList.remove('text-space-400');
+      
+      els.qrShapeSquare.classList.remove('bg-space-700', 'text-white', 'shadow');
+      els.qrShapeSquare.classList.add('text-space-400');
+
+      els.btnDownloadFree.disabled = true;
+      els.btnDownloadFree.innerHTML = '<i class="ph-fill ph-lock-key"></i> Switch to Square for Free';
+      els.btnDownloadFree.classList.add('opacity-50', 'cursor-not-allowed');
+
+      renderCanvas();
+    });
+
+    // Core Drawing Helpers
+    function drawRoundedRect(c, x, y, w, h, r) {
+      c.beginPath();
+      c.moveTo(x+r, y); c.arcTo(x+w, y, x+w, y+h, r); c.arcTo(x+w, y+h, x, y+h, r); c.arcTo(x, y+h, x, y, r); c.arcTo(x, y, x+w, y, r);
+      c.closePath();
+    }
+
+    function drawImageCover(targetCtx, img, w, h) {
+       const imgRatio = img.width / img.height;
+       const canvasRatio = w / h;
+       let renderW, renderH, x = 0, y = 0;
+       
+       if (imgRatio > canvasRatio) {
+           renderH = h;
+           renderW = img.width * (h / img.height);
+           x = (w - renderW) / 2;
+       } else {
+           renderW = w;
+           renderH = img.height * (w / img.width);
+           y = (h - renderH) / 2;
+       }
+       targetCtx.drawImage(img, x, y, renderW, renderH);
+    }
+
+    function renderTemplateBackground(targetCtx, width, height, tUrl) {
+      if (state.useCustomTemplate && state.customTemplateImg) {
+        drawImageCover(targetCtx, state.customTemplateImg, width, height);
+        return;
+      }
+
+      const img = state.preloadedImages[tUrl];
+      if (img && img.complete) {
+         drawImageCover(targetCtx, img, width, height);
+      } else {
+         targetCtx.fillStyle = '#1e293b';
+         targetCtx.fillRect(0, 0, width, height);
+      }
+    }
+
+    function generateQR(colorMode, forExport, forceSquare = false) {
+      const rawCvs = document.createElement('canvas');
+      rawCvs.width = 1000; rawCvs.height = 1000;
+      const c = rawCvs.getContext('2d');
+      
+      let qr;
+      try {
+        qr = qrcode(0, 'M'); 
+        const dataToEncode = forExport ? (state.qrData || 'https://upiart.com') : 'https://upiart.com/secure-preview';
+        qr.addData(dataToEncode);
+        qr.make();
+      } catch (e) { return rawCvs; }
+
+      const count = qr.getModuleCount();
+      const quietZone = 4;
+      const totalModules = count + (quietZone * 2);
+      const modSize = 1000 / totalModules;
+      const offXY = quietZone * modSize;
+
+      const qrFgColor = colorMode === 'dark' ? '#000000' : '#FFFFFF';
+      const qrBgColor = colorMode === 'dark' ? '#FFFFFF' : '#000000';
+
+      const activeShape = forceSquare ? 'square' : state.qrShape;
+
+      // PRO FEATURE: Background of the QR curved
+      c.fillStyle = qrBgColor;
+      if (activeShape === 'rounded') {
+        // Draw curved solid background exactly behind the QR with a pronounced radius
+        drawRoundedRect(c, 0, 0, 1000, 1000, 1000 * 0.15); 
+        c.fill();
+      } else {
+        c.fillRect(0, 0, 1000, 1000);
+      }
+
+      c.fillStyle = qrFgColor;
+
+      for (let r = 0; r < count; r++) {
+        for (let col = 0; col < count; col++) {
+          if ((r < 7 && col < 7) || (r < 7 && col >= count - 7) || (r >= count - 7 && col < 7)) continue;
+          if (qr.isDark(r, col)) {
+            const x = Math.floor(offXY + col * modSize);
+            const y = Math.floor(offXY + r * modSize);
+            if (activeShape === 'rounded') {
+              const pad = modSize * 0.05;
+              drawRoundedRect(c, x + pad, y + pad, modSize - pad * 2, modSize - pad * 2, modSize * 0.25);
+              c.fill();
+            } else {
+              c.fillRect(x, y, Math.ceil(modSize), Math.ceil(modSize));
+            }
+          }
+        }
+      }
+
+      const drawFinder = (col, r) => {
+        const x = Math.floor(offXY + col * modSize);
+        const y = Math.floor(offXY + r * modSize);
+        const s7 = Math.ceil(modSize * 7);
+        const s5 = Math.ceil(modSize * 5);
+        const s3 = Math.ceil(modSize * 3);
+        const m1 = Math.floor(modSize);
+        const m2 = Math.floor(modSize * 2);
+
+        if (activeShape === 'rounded') {
+          c.fillStyle = qrFgColor;
+          drawRoundedRect(c, x, y, s7, s7, modSize*1.5);
+          c.fill();
+          c.fillStyle = qrBgColor;
+          drawRoundedRect(c, x + m1, y + m1, s5, s5, modSize*1.0);
+          c.fill();
+          c.fillStyle = qrFgColor;
+          drawRoundedRect(c, x + m2, y + m2, s3, s3, modSize*0.5);
+          c.fill();
+        } else {
+          c.fillStyle = qrFgColor;
+          c.fillRect(x, y, s7, s7);
+          c.fillStyle = qrBgColor;
+          c.fillRect(x + m1, y + m1, s5, s5);
+          c.fillStyle = qrFgColor;
+          c.fillRect(x + m2, y + m2, s3, s3);
+        }
+      };
+
+      drawFinder(0, 0);
+      drawFinder(count - 7, 0);
+      drawFinder(0, count - 7);
+
+      return rawCvs;
+    }
+
+    function renderCanvas(forExport = false, exportIsPremium = false, forceFallbackBg = state.needsFallback, forceSquareValidation = false) {
+      if (state.step < 3) return document.createElement('canvas');
+      els.canvas.classList.remove('opacity-0');
+
+      let drawW = state.canvasW;
+      let drawH = state.canvasH;
+      if (forExport) {
+        if (exportIsPremium) { drawW = 2048; drawH = 2730; } 
+        else { drawW = 512; drawH = 682; } 
+      }
+
+      const ratio = drawW / state.canvasW;
+      const cvs = forExport ? document.createElement('canvas') : els.canvas;
+      cvs.width = drawW; cvs.height = drawH;
+      const tCtx = cvs.getContext('2d');
+
+      // 1. Draw Template Background
+      renderTemplateBackground(tCtx, drawW, drawH, state.selectedTemplateUrl);
+
+      // 2. Render QR Code Layer
+      const qx = state.qrTransform.x * ratio;
+      const qy = state.qrTransform.y * ratio;
+      const qs = state.qrTransform.size * ratio;
+
+      // AUTOCORRECT: Contrast-safe fallback backdrop block if strictly requested
+      if (forceFallbackBg) {
+        tCtx.save();
+        tCtx.fillStyle = state.qrColorMode === 'dark' ? '#FFFFFF' : '#000000';
+        drawRoundedRect(tCtx, qx - qs*0.05, qy - qs*0.05, qs*1.1, qs*1.1, qs*0.05);
+        tCtx.fill();
+        tCtx.restore();
+      }
+
+      // Ensure crisp render structure
+      tCtx.save();
+      tCtx.shadowColor = 'rgba(0,0,0,0.5)';
+      tCtx.shadowBlur = 40 * ratio;
+      tCtx.shadowOffsetY = 20 * ratio;
+      
+      const qrCvs = generateQR(state.qrColorMode, forExport, forceSquareValidation);
+      tCtx.drawImage(qrCvs, qx, qy, qs, qs);
+      tCtx.restore();
+
+      // 3. Draw Edit Handles (Preview only)
+      if (!forExport && state.step === 3) {
+        tCtx.save();
+        tCtx.strokeStyle = 'rgba(255,255,255,0.9)';
+        tCtx.lineWidth = 3;
+        tCtx.setLineDash([12, 12]);
+        tCtx.strokeRect(qx, qy, qs, qs);
+        
+        tCtx.setLineDash([]);
+        tCtx.fillStyle = '#8b5cf6';
+        tCtx.strokeStyle = '#ffffff';
+        tCtx.lineWidth = 2;
+        const hs = 14;
+        const drawHandle = (hx, hy) => { tCtx.beginPath(); tCtx.arc(hx, hy, hs, 0, Math.PI*2); tCtx.fill(); tCtx.stroke(); };
+        drawHandle(qx, qy); drawHandle(qx+qs, qy); drawHandle(qx, qy+qs); drawHandle(qx+qs, qy+qs);
+        tCtx.restore();
+      }
+
+      // 4. Draw Footer Text (Free Export only)
+      if (forExport && !exportIsPremium) {
+        tCtx.save();
+        tCtx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        tCtx.fillRect(0, drawH - 40, drawW, 40);
+        tCtx.fillStyle = '#000000';
+        tCtx.font = `bold 14px Inter`;
+        tCtx.textAlign = 'center';
+        tCtx.textBaseline = 'middle';
+        tCtx.fillText('Created with UpiArt Studio', drawW/2, drawH - 20);
+        tCtx.restore();
+      }
+
+      return cvs;
+    }
+
+    // Interactive Dragging on Canvas
+    function getEventPos(e) {
+      const rect = els.canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      const canvasRatio = els.canvas.width / els.canvas.height;
+      const rectRatio = rect.width / rect.height;
+      
+      let actualW = rect.width;
+      let actualH = rect.height;
+      let offX = 0, offY = 0;
+
+      if (canvasRatio > rectRatio) {
+        actualH = rect.width / canvasRatio;
+        offY = (rect.height - actualH) / 2;
+      } else {
+        actualW = rect.height * canvasRatio;
+        offX = (rect.width - actualW) / 2;
+      }
+
+      return {
+        x: ((clientX - rect.left - offX) / actualW) * els.canvas.width,
+        y: ((clientY - rect.top - offY) / actualH) * els.canvas.height
+      };
+    }
+
+    function getDragHandle(x, y) {
+      const {x: tx, y: ty, size: ts} = state.qrTransform;
+      const hs = 50; 
+      if (Math.hypot(x - tx, y - ty) < hs) return 'tl';
+      if (Math.hypot(x - (tx+ts), y - ty) < hs) return 'tr';
+      if (Math.hypot(x - tx, y - (ty+ts)) < hs) return 'bl';
+      if (Math.hypot(x - (tx+ts), y - (ty+ts)) < hs) return 'br';
+      if (x > tx && x < tx+ts && y > ty && y < ty+ts) return 'move';
+      return null;
+    }
+
+    const startDrag = (e) => {
+      if (state.step !== 3) return;
+      const pos = getEventPos(e);
+      state.dragHandle = getDragHandle(pos.x, pos.y);
+      if (state.dragHandle) {
+        if(e.cancelable) e.preventDefault();
+        state.isDragging = true;
+        state.dragStart = { x: pos.x, y: pos.y, tx: state.qrTransform.x, ty: state.qrTransform.y, ts: state.qrTransform.size };
+      }
+    };
+
+    const moveDrag = (e) => {
+      if (state.step !== 3) return;
+      const pos = getEventPos(e);
+      
+      if (!state.isDragging) {
+        const hover = getDragHandle(pos.x, pos.y);
+        if (hover === 'move') els.canvas.style.cursor = 'move';
+        else if (hover === 'tl' || hover === 'br') els.canvas.style.cursor = 'nwse-resize';
+        else if (hover === 'tr' || hover === 'bl') els.canvas.style.cursor = 'nesw-resize';
+        else els.canvas.style.cursor = 'default';
+        return;
+      }
+
+      if(e.cancelable) e.preventDefault();
+      const dx = pos.x - state.dragStart.x;
+      const dy = pos.y - state.dragStart.y;
+      const { tx, ty, ts } = state.dragStart;
+
+      if (state.dragHandle === 'move') {
+        state.qrTransform.x = tx + dx;
+        state.qrTransform.y = ty + dy;
+      } else if (state.dragHandle === 'br') {
+        state.qrTransform.size = Math.max(150, ts + Math.max(dx, dy));
+      } else if (state.dragHandle === 'tl') {
+        const nSize = Math.max(150, ts - Math.min(dx, dy));
+        state.qrTransform.size = nSize;
+        state.qrTransform.x = tx + (ts - nSize);
+        state.qrTransform.y = ty + (ts - nSize);
+      } else if (state.dragHandle === 'tr') {
+        const nSize = Math.max(150, ts + Math.max(dx, -dy));
+        state.qrTransform.size = nSize;
+        state.qrTransform.y = ty - (nSize - ts);
+      } else if (state.dragHandle === 'bl') {
+        const nSize = Math.max(150, ts + Math.max(-dx, dy));
+        state.qrTransform.size = nSize;
+        state.qrTransform.x = tx - (nSize - ts);
+      }
+      renderCanvas();
+    };
+
+    const endDrag = () => { 
+        if (state.isDragging) {
+            state.isDragging = false; 
+            state.dragHandle = null; 
+        }
+    };
+
+    els.canvas.addEventListener('mousedown', startDrag);
+    els.canvas.addEventListener('mousemove', moveDrag);
+    window.addEventListener('mouseup', endDrag);
+    els.canvas.addEventListener('touchstart', startDrag, {passive:false});
+    els.canvas.addEventListener('touchmove', moveDrag, {passive:false});
+    window.addEventListener('touchend', endDrag);
+
+    // Verification & Download System
+    function triggerDownload(canvas, filename) {
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    async function testScannability(canvas) {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          try {
+              // Scale down poster to a jsQR friendly size
+              const testCanvas = document.createElement('canvas');
+              const scale = Math.min(1, 800 / Math.max(canvas.width, canvas.height));
+              testCanvas.width = Math.floor(canvas.width * scale);
+              testCanvas.height = Math.floor(canvas.height * scale);
+              const ctx = testCanvas.getContext('2d');
+              
+              ctx.imageSmoothingEnabled = false;
+              ctx.drawImage(canvas, 0, 0, testCanvas.width, testCanvas.height);
+              
+              // Tainted Canvas (CORS) throws an error here if running file:/// locally
+              const imgData = ctx.getImageData(0, 0, testCanvas.width, testCanvas.height);
+              
+              const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "attemptBoth" });
+              
+              const expectedData = state.qrData || 'https://upiart.com';
+              resolve(code && code.data === expectedData);
+          } catch(err) {
+              reject(err);
+          }
+        }, 100); 
+      });
+    }
+
+    async function processDownload(isPaid) {
+      const btn = isPaid ? els.btnDownloadPaid : els.btnDownloadFree;
+      
+      els.validationTitle.textContent = "Validating Scannability...";
+      els.validationSub.textContent = "Running visual algorithms to ensure your code scans perfectly.";
+      els.validationModal.classList.remove('hidden');
+      btn.disabled = true;
+
+      // Validation Step 1: Generate canvas for testing (force square logic to bypass jsQR shape limits)
+      let exportCanvas = renderCanvas(true, isPaid, state.needsFallback, true);
+      let isScannable = false;
+      let skippedValidation = false;
+
+      try {
+          isScannable = await testScannability(exportCanvas);
+
+          // Validation Step 2: Auto-Correct Logic if failed
+          if (!isScannable && !state.needsFallback) {
+            els.validationSub.textContent = "Adding safe backdrop to ensure readability...";
+            exportCanvas = renderCanvas(true, isPaid, true, true);
+            isScannable = await testScannability(exportCanvas);
+            if (isScannable) {
+                state.needsFallback = true;
+                renderCanvas(); // Update visual UI so user sees the autocorrect
+            }
+          }
+
+          if (!isScannable) {
+              els.validationModal.classList.add('hidden');
+              toast('QR is too small or unscannable! Please scale the QR larger.', 'error');
+              btn.disabled = false;
+              return;
+          }
+      } catch (err) {
+          console.warn("Validation skipped due to strict browser security (CORS). Host on Netlify for validation to work.");
+          skippedValidation = true;
+      }
+
+      // If we reach here, it either passed validation or skipped it safely
+      const previewCtx = els.canvas.getContext('2d');
+      previewCtx.clearRect(0, 0, els.canvas.width, els.canvas.height);
+      previewCtx.drawImage(exportCanvas, 0, 0, els.canvas.width, els.canvas.height);
+
+      const triggerSuccess = (filename, title, subtitle) => {
+          els.validationModal.classList.add('hidden');
+          triggerDownload(exportCanvas, filename);
+          document.getElementById('successTitle').textContent = title;
+          document.getElementById('successMessage').textContent = skippedValidation ? "Security blocked local scan. Test via phone!" : subtitle;
+          document.getElementById('successOverlay').classList.remove('hidden');
+          btn.disabled = false;
+      };
+
+      if (isPaid) {
+        els.validationTitle.textContent = "Secure Checkout...";
+        els.validationSub.textContent = "Please complete your payment securely via Razorpay.";
+        
+        setTimeout(() => {
+          els.validationModal.classList.add('hidden');
+          const options = {
+            key: RAZORPAY_KEY_ID, 
+            amount: 500, 
+            currency: "INR", 
+            name: "UpiArt Studio", 
+            description: "Premium HD QR Download",
+            handler: function (response) { 
+              setTimeout(() => triggerSuccess('UpiArt-Premium-HD.png', 'Master Downloaded!', 'Your premium 4K QR code is ready to print or share.'), 500);
+            },
+            modal: { ondismiss: function() { btn.disabled = false; toast('Payment window closed.', 'error'); } }, 
+            theme: { color: "#8b5cf6" }
+          };
+          try { 
+            const rzp = new window.Razorpay(options); rzp.open(); 
+          } catch(e) { 
+            toast('Payment gateway failed. Ensure scripts are loaded.', 'error'); 
+            btn.disabled = false; 
+          }
+        }, 800);
+      } else {
+        triggerSuccess('UpiArt-Free-SD.png', 'Standard Downloaded!', 'Your standard SD code is ready to scan.');
+      }
+    }
+
+    els.btnDownloadFree.addEventListener('click', () => processDownload(false));
+    els.btnDownloadPaid.addEventListener('click', () => processDownload(true));
+
+    // Boot
+    initTemplates();
+  </script>
+</body>
+</html>
